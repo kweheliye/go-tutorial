@@ -25,6 +25,7 @@ func get(url string, ch chan<- result) {
 }
 
 func main() {
+	stopper := time.After(300 * time.Millisecond)
 
 	result := make(chan result)
 	urls := []string{
@@ -40,13 +41,16 @@ func main() {
 	}
 
 	for range urls {
-		r := <-result
-		if r.err != nil {
-			log.Printf("%s failed: %v", r.url, r.err)
-		} else {
-			log.Printf("%s took %s", r.url, r.latency)
+		select {
+		case r := <-result:
+			if r.err != nil {
+				log.Printf("%s failed: %v", r.url, r.err)
+			} else {
+				log.Printf("%s took %s", r.url, r.latency)
+			}
+		case t := <-stopper:
+			log.Fatalf("timeout %s", t)
 		}
-
 	}
 
 	log.Printf("%d urls took %s", len(urls), time.Since(start))
