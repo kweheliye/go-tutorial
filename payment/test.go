@@ -37,12 +37,43 @@ func (w WalletPayment) processPayment(amount float64) error {
 	return nil
 }
 
+func processPayment(p ProcessPayment, amount float64) {
+	if err := p.processPayment(amount); err != nil {
+		fmt.Println("Payment failed:", err)
+	} else {
+		fmt.Println("Payment Processed Successful")
+	}
+}
+
+func PaymentFactory(paymentType string, data map[string]interface{}) ProcessPayment {
+	switch paymentType {
+	case "credit":
+		return CreditPayment{
+			cardNo:     data["cardNo"].(int),
+			expiryDate: data["expiryDate"].(time.Time),
+		}
+	case "wallet":
+		return WalletPayment{
+			walletId: data["walletId"].(string),
+			balance:  data["balance"].(float64),
+		}
+	}
+	return nil
+}
+
 func main() {
 
-	credit := CreditPayment{cardNo: 12234, expiryDate: time.Now().AddDate(1, 0, 0)}
+	credit := PaymentFactory("credit", map[string]interface{}{
+		"cardNo":     123456789,
+		"expiryDate": time.Now().AddDate(1, 0, 0),
+	})
 
-	if err := credit.processPayment(100); err != nil {
-		fmt.Println("Error:", err)
-	}
+	wallet := PaymentFactory("wallet", map[string]any{
+		"walletId": "12345",
+		"balance":  1000.00,
+	})
+
+	processPayment(credit, 100)
+	processPayment(wallet, 100)
 
 }
