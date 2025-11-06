@@ -1,0 +1,1 @@
+package go_class_closure
