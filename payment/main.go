@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-type ProcessPayment interface {
-	processPayment(money float64) error
+type Payer interface {
+	Pay(money float64) error
 }
 
 type CreditPayment struct {
@@ -19,7 +19,7 @@ type WalletPayment struct {
 	balance  float64
 }
 
-func (c CreditPayment) processPayment(amount float64) error {
+func (c *CreditPayment) Pay(amount float64) error {
 
 	if time.Now().After(c.expiryDate) {
 		return fmt.Errorf("credit card expired")
@@ -28,7 +28,7 @@ func (c CreditPayment) processPayment(amount float64) error {
 	return nil
 }
 
-func (w WalletPayment) processPayment(amount float64) error {
+func (w *WalletPayment) Pay(amount float64) error {
 	if w.balance < amount {
 		return fmt.Errorf("not enough balance in wallet")
 	}
@@ -37,28 +37,36 @@ func (w WalletPayment) processPayment(amount float64) error {
 	return nil
 }
 
-func processPayment(p ProcessPayment, amount float64) {
-	if err := p.processPayment(amount); err != nil {
+func Process(p Payer, amount float64) {
+	if err := p.Pay(amount); err != nil {
 		fmt.Println("Payment failed:", err)
 	} else {
 		fmt.Println("Payment Processed Successful")
 	}
 }
 
-func PaymentFactory(paymentType string, data map[string]interface{}) ProcessPayment {
+func PaymentFactory(paymentType string, data map[string]interface{}) Payer {
 	switch paymentType {
 	case "credit":
-		return CreditPayment{
+		return &CreditPayment{
 			cardNo:     data["cardNo"].(int),
 			expiryDate: data["expiryDate"].(time.Time),
 		}
 	case "wallet":
-		return WalletPayment{
+		return &WalletPayment{
 			walletId: data["walletId"].(string),
 			balance:  data["balance"].(float64),
 		}
 	}
 	return nil
+}
+
+func NewCreditPayment(cardNo int, expiry time.Time) Payer {
+	return &CreditPayment{cardNo: cardNo, expiryDate: expiry}
+}
+
+func NewWalletPayment(walletId string, balance float64) Payer {
+	return &WalletPayment{walletId: walletId, balance: balance}
 }
 
 func main() {
@@ -73,7 +81,13 @@ func main() {
 		"balance":  1000.00,
 	})
 
-	processPayment(credit, 100)
-	processPayment(wallet, 100)
+	Process(credit, 100)
+	Process(wallet, 100)
+
+	credit1 := NewCreditPayment(123456789, time.Now().AddDate(1, 0, 0))
+	wallet2 := NewWalletPayment("12345", 1000.00)
+
+	Process(credit1, 100)
+	Process(wallet2, 200)
 
 }
